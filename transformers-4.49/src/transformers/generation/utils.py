@@ -1386,6 +1386,10 @@ class GenerationMixin:
             if "assistant_encoder_outputs" in model_kwargs:
                 model_args |= {"assistant_encoder_outputs"}
 
+        # CK-PLUG: allow custom kwargs for CK decoding
+        ck_custom_args = {"cad", "cf","beta"}
+        model_args |= ck_custom_args
+
         for key, value in model_kwargs.items():
             if value is not None and key not in model_args:
                 unused_model_args.append(key)
@@ -1887,6 +1891,8 @@ class GenerationMixin:
         ck_decoding: Optional[bool] = None,
         alpha: Optional[float] = 0.1,
         adaptive: Optional[bool] = True,
+        cad: Optional[bool] = False,
+        beta: Optional[float] = None,
         select_top: Optional[int] = 10,
         logits_processor: Optional[LogitsProcessorList] = None,
         logits_processor_student: Optional[LogitsProcessorList] = None,
@@ -2275,6 +2281,9 @@ class GenerationMixin:
                 input_ids_student,
                 alpha=alpha,
                 adaptive=adaptive,
+                cad=cad,
+                cf=cf,
+                beta=beta,
                 select_top=select_top,
                 logits_processor=prepared_logits_processor,
                 logits_processor_student=prepared_logits_processor_student,
@@ -2611,6 +2620,8 @@ class GenerationMixin:
         input_ids_student: torch.LongTensor,
         alpha: float,
         adaptive: bool,
+        cad: bool,
+        beta: float,
         logits_processor: LogitsProcessorList,
         logits_processor_student: LogitsProcessorList,
         select_top: int,
@@ -2764,10 +2775,13 @@ class GenerationMixin:
                     next_token_logits_student = 2 * next_token_logits_student * entropy / (entropy + entropy_student * normalization_factor)
                     logits_context = 2 * logits_context * entropy_student / (entropy + entropy_student * normalization_factor)
                     logits_adjust = next_token_logits_student + logits_context
-                    next_token_scores = logits_processor(input_ids, logits_adjust)
+                    next_token_scores = logits_processor(input_ids, logits_adjust)    
                 else:
                     logits_adjust = alpha * next_token_logits_student + (1-alpha) * logits_context
                     next_token_scores = logits_processor(input_ids, logits_adjust)
+            elif cad and beta is not None:
+                logits_adjust = (1+beta) * next_token_logits - (1+beta) * next_token_logits_student
+                next_token_scores = logits_processor(input_ids, logits_adjust)
             else:
                 next_token_scores = logits_processor(input_ids, next_token_logits)
 

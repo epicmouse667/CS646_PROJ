@@ -7,6 +7,7 @@ from collections import Counter
 from rouge import Rouge
 import torch
 import torch.nn.functional as F
+from datasets import load_dataset
 SPECIAL_TOKEN_LENGTH =64
 
 def load_jsonlines(file):
@@ -17,11 +18,14 @@ def load_jsonlines(file):
 def load_file(input_fp):
     if input_fp.endswith(".json"):
         input_data = json.load(open(input_fp))
+    elif input_fp.endswith(".parquet"):
+        dataset = load_dataset("parquet", data_files=input_fp)
+        input_data = dataset['train']
     else:
         input_data = load_jsonlines(input_fp)
     return input_data
 
-def process_input_data(input_data, args,top_n, tokenizer):
+def process_input_data(input_data, args, top_n, tokenizer, score_threshold=None):
     for item in input_data:
         if "golds" not in item:
             if "reference" in item:
@@ -38,7 +42,7 @@ def process_input_data(input_data, args,top_n, tokenizer):
                 item["golds"] = [item["answerKey"]]
             if "AnswerKey" in item:
                 item["golds"] = [item["AnswerKey"]]
-
+        # print("item",item)
         if isinstance(item["golds"], str):
             item["golds"] = [item["golds"]]
 
@@ -88,6 +92,9 @@ def process_input_data(input_data, args,top_n, tokenizer):
 
             if args.rerank:
                 for psg in item['rerank_passage']:
+                    # Filter by score threshold if provided
+                    if score_threshold is not None and psg.get('score', 1.0) < score_threshold:
+                        continue
                     if "text" in psg:
                         passage_list.append(psg['text'])
                     elif "passage_text" in psg:
@@ -97,6 +104,9 @@ def process_input_data(input_data, args,top_n, tokenizer):
 
             else:
                 for psg in item['passage']:
+                    # Filter by score threshold if provided
+                    if score_threshold is not None and psg.get('score', 1.0) < score_threshold:
+                        continue
                     if "text" in psg:
                         passage_list.append(psg['text'])
                     elif "passage_text" in psg:

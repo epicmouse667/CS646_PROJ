@@ -8,6 +8,7 @@ import torch
 import heapq
 import logging
 import argparse
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ def dot_score(a: torch.Tensor, b: torch.Tensor):
 
 class DenseRetrievalExactSearch:
     
-    def __init__(self, model, batch_size: int = 512, corpus_chunk_size: int = 10000, **kwargs):
+    def __init__(self, model, batch_size: int = 4096, corpus_chunk_size: int = 10000, **kwargs):
         # model is class that provides encode_corpus() and encode_queries()
         self.model = model
         self.batch_size = batch_size
@@ -196,10 +197,10 @@ class DenseRetrievalExactSearch:
         logger.info('Scoring Function: {} ({})'.format(self.score_function_desc[score_function], score_function))
 
         itr = range(0, len(corpus), self.corpus_chunk_size)
-        
+        print("self.batch_size,self.corpus_chunk_size:", self.batch_size, self.corpus_chunk_size)
         result_heaps = {qid: [] for qid in query_ids}  # Keep only the top-k docs for each query
-        for batch_num, corpus_start_idx in enumerate(itr):
-            logger.info('Encoding Batch {}/{}...'.format(batch_num + 1, len(itr)))
+        for batch_num, corpus_start_idx in tqdm(enumerate(itr),total=len(itr)):
+            # logger.info('Encoding Batch {}/{}...'.format(batch_num + 1, len(itr)))
             corpus_end_idx = min(corpus_start_idx + self.corpus_chunk_size, len(corpus))
 
             # Encode chunk of corpus    
@@ -239,7 +240,7 @@ class DenseRetrievalExactSearch:
 
 class DenseRetrievalExactSearchMultiDatasets:
     
-    def __init__(self, model, batch_size: int = 128, corpus_chunk_size: int = 10000, **kwargs):
+    def __init__(self, model, batch_size: int = 512, corpus_chunk_size: int = 10000, **kwargs):
         # model is class that provides encode_corpus() and encode_queries()
         self.model = model
         self.batch_size = batch_size
@@ -289,10 +290,10 @@ class DenseRetrievalExactSearchMultiDatasets:
         
         result_heaps_list = [{qid: [] for qid in query_ids} for query_ids in query_ids_list] # Keep only the top-k docs for each query
 
-        for batch_num, corpus_start_idx in enumerate(itr):
+        for batch_num, corpus_start_idx in tqdm(enumerate(itr),total=len(itr)):
             # if batch_num == 0:
             #     continue
-            logger.info('Encoding Batch {}/{}...'.format(batch_num+1, len(itr)))
+            # logger.info('Encoding Batch {}/{}...'.format(batch_num+1, len(itr)))
             corpus_end_idx = min(corpus_start_idx + self.corpus_chunk_size, len(corpus))
 
             # Encode chunk of corpus    

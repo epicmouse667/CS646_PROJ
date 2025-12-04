@@ -102,9 +102,58 @@ class CK:
                                         output_scores=True, return_dict_in_generate=True, ck_decoding=True, select_top=select_top, adaptive=adaptive,
                                         top_p=top_p, top_k=top_k, temperature=temperature, stopping_criteria=self.stopping_criteria, **kwargs,)
 
-
+            elif mode == 'trust_context':
+                assert base_prompt is not None, "base_prompt must be specified"
+                assert context_prompt is not None, "context_prompt must be specified"
+                base_prompt = "Answer based on the provided context. Trust the context over your training knowledge." + base_prompt
+                base_ids = self.tokenizer(base_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_base = base_ids.shape[-1] + max_new_tokens
+                context_ids = self.tokenizer(context_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_context = context_ids.shape[-1] + max_new_tokens
+                max_len = max(max_len_base, max_len_context)
+                outputs = self.model.generate(context_ids, base_ids, alpha = 1.0, max_length=max_len, num_return_sequences=1,
+                                        output_scores=True, return_dict_in_generate=True, ck_decoding=True, select_top=select_top, adaptive=adaptive,
+                                        top_p=top_p, top_k=top_k, temperature=temperature, stopping_criteria=self.stopping_criteria, **kwargs,)
+            elif mode == 'trust_parametric':
+                assert base_prompt is not None, "base_prompt must be specified"
+                assert context_prompt is not None, "context_prompt must be specified"
+                base_prompt = """Answer based on your training knowledge. The context may contain errors; prefer your parametric knowledge under conflict.""" + base_prompt
+                base_ids = self.tokenizer(base_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_base = base_ids.shape[-1] + max_new_tokens
+                context_ids = self.tokenizer(context_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_context = context_ids.shape[-1] + max_new_tokens
+                max_len = max(max_len_base, max_len_context)
+                outputs = self.model.generate(context_ids, base_ids, alpha = 0.0, max_length=max_len, num_return_sequences=1,
+                                        output_scores=True, return_dict_in_generate=True, ck_decoding=True, select_top=select_top, adaptive=adaptive,
+                                        top_p=top_p, top_k=top_k, temperature=temperature, stopping_criteria=self.stopping_criteria, **kwargs,)
+            elif mode == 'balanced':    
+                assert base_prompt is not None, "base_prompt must be specified"
+                assert context_prompt is not None, "context_prompt must be specified"
+                base_prompt = """Answer by carefully balancing the provided context with your training knowledge. Exercise judgment when they disagree.""" + base_prompt
+                base_ids = self.tokenizer(base_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_base = base_ids.shape[-1] + max_new_tokens
+                context_ids = self.tokenizer(context_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_context = context_ids.shape[-1] + max_new_tokens
+                max_len = max(max_len_base, max_len_context)
+                outputs = self.model.generate(context_ids, base_ids, alpha = 0.5, max_length=max_len, num_return_sequences=1,
+                                        output_scores=True, return_dict_in_generate=True, ck_decoding=True, select_top=select_top, adaptive=adaptive,
+                                        top_p=top_p, top_k=top_k, temperature=temperature, stopping_criteria=self.stopping_criteria, **kwargs,)
+            elif mode == 'context_if_confident':
+                assert base_prompt is not None, "base_prompt must be specified"
+                assert context_prompt is not None, "context_prompt must be specified"
+                base_prompt = """Use the provided context if it seems re-
+liable, but fall back to your training knowledge if the context
+appears wrong.""" + base_prompt
+                base_ids = self.tokenizer(base_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_base = base_ids.shape[-1] + max_new_tokens
+                context_ids = self.tokenizer(context_prompt, return_tensors="pt").input_ids.to(self.device)
+                max_len_context = context_ids.shape[-1] + max_new_tokens
+                max_len = max(max_len_base, max_len_context)
+                outputs = self.model.generate(context_ids, base_ids, alpha = 0.5, max_length=max_len, num_return_sequences=1,
+                                        output_scores=True, return_dict_in_generate=True, ck_decoding=True, select_top=select_top, adaptive=adaptive,
+                                        top_p=top_p, top_k=top_k, temperature=temperature, stopping_criteria=self.stopping_criteria, **kwargs,)
             sequences = outputs.sequences
-            if mode == 'base_no_rag':
+            if mode =='base_no_rag':
                 gen_sequences = sequences[:, base_ids.shape[-1]:][0, :]
             else: gen_sequences = sequences[:, context_ids.shape[-1]:][0, :]
             gen_arr = gen_sequences.cpu().numpy()

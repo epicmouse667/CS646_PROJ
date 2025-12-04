@@ -124,6 +124,7 @@ def random_test_data_collection(dataset_name: str,
 
 
 def split_100_words(text, max_words=100):
+    text = "\n".join(text)
     words = text.split()
     substrings = []
     current_substring = []
@@ -153,7 +154,8 @@ def split_corpus_to_100(in_corpus_file='./wikipedia_2019_08_01.jsonl',
             for i, passage in enumerate(passages):
                 new_obj = {
                     '_id': obj['_id'] + str(i),
-                    'title': obj['title'],
+                    # 'title': obj['title'],
+                    'title': obj['wikipedia_title'],
                     'text': passage,
                 }
                 chunk.append(new_obj)
@@ -173,14 +175,14 @@ def split_corpus_to_100(in_corpus_file='./wikipedia_2019_08_01.jsonl',
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, required=True, help='The dataset to collect and process.')
-    parser.add_argument('--base', type=str, default='./data', help='The base folder.')
+    # parser.add_argument('--dataset', type=str, required=True, help='The dataset to collect and process.')
+    parser.add_argument('--base', type=str, default='./kr_data/kilt_tasks', help='The base folder.')
     args = parser.parse_args()
-
-    collect_kilt_dataset(args.dataset, args.base, train=False)
-    random_seed_collection(args.dataset, args.base, max_num=1000, n=5)
-    random_test_data_collection(args.dataset, args.base, max_num=1000, n=1)
-
+    datasets = ['nq', 'hotpotqa', 'eli5', 'fever', 'wow', 'trex']
+    for ds in datasets:
+        collect_kilt_dataset(ds, args.base, train=False)
+        # random_seed_collection(ds, args.base, max_num=1000, n=5)
+        random_test_data_collection(ds, args.base, max_num=1000, n=1)
 
 if __name__ == '__main__':
     main()

@@ -2,13 +2,13 @@ import argparse
 import json
 import os
 os.environ["MKL_THREADING_LAYER"] = "GNU"
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import numpy as np
-import torch
-from peft import PeftConfig, PeftModel
+# import torch
+# from peft import PeftConfig, PeftModel
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+# from transformers import AutoModelForCausalLM, AutoTokenizer
 import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.abspath(os.path.join(current_dir, "../"))
@@ -16,7 +16,7 @@ if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 from eval_rag_utils import load_file, process_input_data, postprocess_output, test_kilt
 from ck import CK
-from vllm import LLM, SamplingParams
+# from vllm import LLM, SamplingParams
 
 def call_ck(model, base_prompts, context_prompts, stop, params_dict):
     
@@ -65,6 +65,11 @@ def main():
     parser.add_argument('--output_path', type=str,default=None)
     parser.add_argument('--exp_name', type=str, default=None)
     parser.add_argument('--case_num', type=int, default=-1)
+    parser.add_argument('--cad', type=bool,default=False)
+    parser.add_argument('--cf', type=bool,default=False) # confidence filtering
+    parser.add_argument('--beta', type=float, default=None)
+    parser.add_argument('--score_threshold', type=float, default=None,
+                        help="Filter out passages with retrieval score below this threshold.")
     args = parser.parse_args()
 
 
@@ -85,7 +90,10 @@ def main():
             "mode": args.mode,
             "alpha": 1.0,
             "select_top": 10,
-            "adaptive": args.adaptive
+            "adaptive": args.adaptive,
+            'pad_token_id': 128001, # eos_token_id for llama3
+            # 'cad':args.cad,
+            # 'beta': args.beta
         }
 
     model_name = args.model_name
@@ -100,7 +108,11 @@ def main():
     input_data = load_file(args.input_file)
     if args.case_num != -1:
         input_data = input_data[:args.case_num]
-    input_data = process_input_data(input_data, args, args.top_n, model.tokenizer)
+    if args.cf: # confidence filtering
+        input_data = process_input_data(input_data, args, args.top_n, model.tokenizer, 
+                                   score_threshold=args.score_threshold) # filter by score threshold
+    else:
+        input_data = process_input_data(input_data, args, args.top_n, model.tokenizer)
 
 
     final_results = []

@@ -116,6 +116,12 @@ def qa_to_prompt_baseline(query, context, schema):
 
     
 def eval(pred_answers, orig_answers, gold_answers):
+    # if pred_answers is not None:
+    #     for pa,oa,ga in zip(pred_answers, orig_answers, gold_answers):
+    #         print('PREDICTION: {}'.format(pa))
+    #         print('ORIG ANSWER: {}'.format(oa))
+    #         print('GOLD ANSWER: {}'.format(ga))
+    #         print('---')
     em, ps = get_score(pred_answers, gold_answers)
     _, po = get_score(pred_answers, orig_answers)
     mr = po / (ps + po + 1e-10) * 100
@@ -143,6 +149,7 @@ def main():
                     help='ck, base_rag, base_no_rag')
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--adaptive', type=bool, default=False)
+    parser.add_argument('--log_path', type=str, default="./log/eval_nq_ck.json")
     
     args = parser.parse_args()
     with open(args.orig_path, 'r') as fh:
@@ -172,6 +179,7 @@ def main():
             "alpha": args.alpha,
             "adaptive": args.adaptive,
             "select_top": 10,
+            "pad_token_id": model.tokenizer.eos_token_id
         }
     
     step = 0
@@ -193,8 +201,15 @@ def main():
         pred_answers.append(pred)
         gold_answers.append(answer)
         orig_answers.append(orig_answer)
-
+        record.append({
+            "query": query,
+            "context": context,
+            "predicted_answer": pred,
+            "original_answer": orig_answer,
+            "gold_answer": answer
+        })
     if args.log_path:
+        create_log_path(args.log_path)
         with open(args.log_path, 'w') as fh:
             json.dump(record, fh, indent=4,)
     print("The parameter configuration is as follows:")
