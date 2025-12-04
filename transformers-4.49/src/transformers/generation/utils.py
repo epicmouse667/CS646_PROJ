@@ -2282,7 +2282,6 @@ class GenerationMixin:
                 alpha=alpha,
                 adaptive=adaptive,
                 cad=cad,
-                cf=cf,
                 beta=beta,
                 select_top=select_top,
                 logits_processor=prepared_logits_processor,
