@@ -1,14 +1,14 @@
 # eli5 wow trex fever
 task=fever
-adaptive=False
-# 0.1,0.3,0.5
+adaptive=True
 #ck, trust_context, trust_parametric, balanced, context_if_confident,cad,cf
-mode=cad
-for beta in 0.1 0.3 0.5; do
-    echo eval rag on   $task, adaptive: $adaptive, mode: $mode, beta: $beta
+mode=cf
+score_threshold=0.8
+for score_threshold in 0.5 0.6 0.7 0.8; do
+    echo eval rag on   $task, adaptive: $adaptive, mode: $mode, score_threshold: $score_threshold
     python eval_rag.py \
         --model_name ./checkpoints/Meta-Llama-3-8B-Instruct \
-        --mode $mode --adaptive $adaptive --beta $beta \
+        --mode $mode --adaptive $adaptive --score_threshold $score_threshold \
         --input_file /proj/inf-scaling/physhuman/code/CK-PLUG/kr_data/kilt_tasks/$task/test_0_w_passages_bge.jsonl \
         --task $task
 done

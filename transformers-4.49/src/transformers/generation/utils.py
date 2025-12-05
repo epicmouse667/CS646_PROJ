@@ -2760,7 +2760,7 @@ class GenerationMixin:
 
             IG = entropy_student - entropy
             e = -1.0
-            is_adjust = IG + abs(entropy) * e < 0
+            is_adjust = IG + abs(entropy) * e < 0 and not cad
             is_adaptive = adaptive # control if adaptive enhance without alpha
             
             if is_adjust:
